@@ -78,6 +78,7 @@ export default function ProjectDetail() {
       await sendJoinRequest({
         projectId: project.projectId,
         projectTitle: project.title,
+        projectOwnerId: project.ownerId,
         requesterId: user.uid,
         requesterName: profile.name,
         requesterAvatarUrl: profile.avatarUrl || '',
