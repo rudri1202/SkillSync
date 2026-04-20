@@ -199,6 +199,17 @@ export async function getRequestsForProject(projectId) {
   return snap.docs.map((d) => ({ requestId: d.id, ...d.data() }))
 }
 
+export async function getIncomingRequestsForOwner(ownerId) {
+  const q = query(
+    collection(db, 'joinRequests'),
+    where('projectOwnerId', '==', ownerId)
+  )
+  const snap = await getDocs(q)
+  return snap.docs
+    .map((d) => ({ requestId: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
+}
+
 export async function getMyRequests(uid) {
   const q = query(
     collection(db, 'joinRequests'),

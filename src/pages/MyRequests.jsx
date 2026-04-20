@@ -6,7 +6,7 @@ import { PageSpinner } from '../components/ui/Spinner'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Button } from '../components/ui/Button'
 import {
-  getMyRequests, getMyProjects, getRequestsForProject, updateRequestStatus,
+  getMyRequests, getIncomingRequestsForOwner, updateRequestStatus,
 } from '../firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
@@ -37,24 +37,12 @@ export default function MyRequests() {
   useEffect(() => {
     async function load() {
       try {
-        const [myReqs, myProjects] = await Promise.all([
+        const [myReqs, incomingReqs] = await Promise.all([
           getMyRequests(user.uid),
-          getMyProjects(user.uid),
+          getIncomingRequestsForOwner(user.uid),
         ])
         setSent(myReqs)
-
-        if (myProjects.length > 0) {
-          const projectIds = myProjects.map((p) => p.projectId)
-          const chunks = []
-          for (let i = 0; i < projectIds.length; i += 10) chunks.push(projectIds.slice(i, i + 10))
-          const results = await Promise.all(
-            chunks.flatMap((chunk) => chunk.map((id) => getRequestsForProject(id)))
-          )
-          const all = results.flat().sort(
-            (a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
-          )
-          setIncoming(all)
-        }
+        setIncoming(incomingReqs)
       } catch (err) {
         console.error('Failed to load requests:', err)
       } finally {

@@ -34,11 +34,7 @@ service cloud.firestore {
 
     // Join Requests
     match /joinRequests/{requestId} {
-      allow read: if request.auth != null
-        && (
-          resource.data.requesterId == request.auth.uid
-          || resource.data.projectOwnerId == request.auth.uid
-        );
+      allow read: if request.auth != null;
       allow create: if request.auth != null
         && request.resource.data.requesterId == request.auth.uid;
       // Only owner can update status (accept/decline)
