@@ -10,7 +10,7 @@ import { SkillChip, Badge, PROJECT_TYPE_LABELS } from '../components/ui/Badge'
 import { PageSpinner } from '../components/ui/Spinner'
 import { StarRating } from '../components/profile/StarRating'
 import {
-  getUserProfile, getMyProjects, getMyRatingForUser, rateUser,
+  getUserProfile, getMyProjects, getMyRatingForUser, rateUser, getRatingsForUser,
 } from '../firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
@@ -42,6 +42,7 @@ export default function PublicProfile() {
   const { user } = useAuth()
   const [profile, setProfile] = useState(null)
   const [projects, setProjects] = useState([])
+  const [ratings, setRatings] = useState([])
   const [loading, setLoading] = useState(true)
 
   // Rating state
@@ -55,9 +56,14 @@ export default function PublicProfile() {
 
   useEffect(() => {
     async function load() {
-      const [p, proj] = await Promise.all([getUserProfile(uid), getMyProjects(uid)])
+      const [p, proj, allRatings] = await Promise.all([
+        getUserProfile(uid),
+        getMyProjects(uid),
+        getRatingsForUser(uid),
+      ])
       setProfile(p)
       setProjects(proj.filter((x) => x.status === 'open'))
+      setRatings(allRatings)
 
       if (user && user.uid !== uid) {
         const existing = await getMyRatingForUser(user.uid, uid)
@@ -77,8 +83,12 @@ export default function PublicProfile() {
     setSubmittingRating(true)
     try {
       await rateUser(user.uid, uid, selectedRating, review)
-      const updated = await getUserProfile(uid)
+      const [updated, allRatings] = await Promise.all([
+        getUserProfile(uid),
+        getRatingsForUser(uid),
+      ])
       setProfile(updated)
+      setRatings(allRatings)
       setMyRating({ rating: selectedRating, review })
       setShowRatingForm(false)
       toast.success(myRating ? 'Rating updated!' : 'Rating submitted!')
@@ -309,6 +319,49 @@ export default function PublicProfile() {
             )}
           </div>
         )}
+
+        {/* ── Ratings list ── */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 mb-5">
+          <h2 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <StarIcon size={16} className="text-yellow-400" />
+            Ratings &amp; Reviews
+            {profile.totalRatings > 0 && (
+              <span className="ml-1 text-sm font-normal text-gray-500">
+                — {profile.averageRating?.toFixed(1)} avg · {profile.totalRatings} {profile.totalRatings === 1 ? 'rating' : 'ratings'}
+              </span>
+            )}
+          </h2>
+
+          {ratings.length === 0 ? (
+            <p className="text-sm text-gray-400 mt-3">No ratings yet.</p>
+          ) : (
+            <ul className="mt-3 space-y-4">
+              {ratings.map((r) => (
+                <li key={r.ratingId} className="flex gap-3">
+                  <img
+                    src={r.raterAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${r.raterName}`}
+                    alt={r.raterName}
+                    className="h-8 w-8 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-100"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-gray-800">{r.raterName}</span>
+                      <StarRating rating={r.rating} size={13} />
+                      <span className="text-xs text-gray-400">
+                        {r.createdAt?.toDate
+                          ? r.createdAt.toDate().toLocaleDateString()
+                          : ''}
+                      </span>
+                    </div>
+                    {r.review && (
+                      <p className="text-sm text-gray-600 mt-0.5">{r.review}</p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         {/* ── Open Projects ── */}
         {projects.length > 0 && (

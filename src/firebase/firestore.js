@@ -286,40 +286,38 @@ export async function getMyRatingForUser(raterId, ratedUserId) {
 export async function rateUser(raterId, ratedUserId, rating, review = '') {
   if (raterId === ratedUserId) throw new Error('self_rating')
 
-  const userRef = doc(db, 'users', ratedUserId)
-  const [userSnap, existing] = await Promise.all([
-    getDoc(userRef),
+  const [raterSnap, userSnap, existing] = await Promise.all([
+    getDoc(doc(db, 'users', raterId)),
+    getDoc(doc(db, 'users', ratedUserId)),
     getMyRatingForUser(raterId, ratedUserId),
   ])
 
+  const raterData = raterSnap.data() || {}
   const userData = userSnap.data() || {}
   const oldTotal = userData.totalRatings || 0
   const oldAvg = userData.averageRating || 0
+  const userRef = doc(db, 'users', ratedUserId)
 
   if (existing) {
-    // Update the existing rating doc
     await updateDoc(doc(db, 'ratings', existing.ratingId), {
       rating,
       review,
       updatedAt: serverTimestamp(),
     })
-    // Recalculate average without changing totalRatings
     const newAvg = oldTotal > 0
       ? (oldAvg * oldTotal - existing.rating + rating) / oldTotal
       : rating
-    await updateDoc(userRef, {
-      averageRating: Math.round(newAvg * 10) / 10,
-    })
+    await updateDoc(userRef, { averageRating: Math.round(newAvg * 10) / 10 })
   } else {
-    // Add a new rating doc
     await addDoc(collection(db, 'ratings'), {
       raterId,
       ratedUserId,
       rating,
       review,
+      raterName: raterData.name || 'Anonymous',
+      raterAvatar: raterData.avatarUrl || null,
       createdAt: serverTimestamp(),
     })
-    // Recalculate average and increment totalRatings
     const newTotal = oldTotal + 1
     const newAvg = (oldAvg * oldTotal + rating) / newTotal
     await updateDoc(userRef, {
@@ -327,4 +325,15 @@ export async function rateUser(raterId, ratedUserId, rating, review = '') {
       totalRatings: newTotal,
     })
   }
+}
+
+/** Fetch all ratings for a given user, newest first. */
+export async function getRatingsForUser(ratedUserId) {
+  const q = query(
+    collection(db, 'ratings'),
+    where('ratedUserId', '==', ratedUserId),
+    orderBy('createdAt', 'desc')
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ ratingId: d.id, ...d.data() }))
 }
