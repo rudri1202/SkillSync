@@ -56,24 +56,29 @@ export default function PublicProfile() {
 
   useEffect(() => {
     async function load() {
-      const [p, proj, allRatings] = await Promise.all([
-        getUserProfile(uid),
-        getMyProjects(uid),
-        getRatingsForUser(uid),
-      ])
-      setProfile(p)
-      setProjects(proj.filter((x) => x.status === 'open'))
-      setRatings(allRatings)
+      try {
+        const [p, proj, allRatings] = await Promise.all([
+          getUserProfile(uid),
+          getMyProjects(uid),
+          getRatingsForUser(uid),
+        ])
+        setProfile(p)
+        setProjects(proj.filter((x) => x.status === 'open'))
+        setRatings(allRatings)
 
-      if (user && user.uid !== uid) {
-        const existing = await getMyRatingForUser(user.uid, uid)
-        if (existing) {
-          setMyRating(existing)
-          setSelectedRating(existing.rating)
-          setReview(existing.review || '')
+        if (user && user.uid !== uid) {
+          const existing = await getMyRatingForUser(user.uid, uid)
+          if (existing) {
+            setMyRating(existing)
+            setSelectedRating(existing.rating)
+            setReview(existing.review || '')
+          }
         }
+      } catch (err) {
+        console.error('Failed to load profile:', err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     load()
   }, [uid, user])

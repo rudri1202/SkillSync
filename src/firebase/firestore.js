@@ -329,11 +329,9 @@ export async function rateUser(raterId, ratedUserId, rating, review = '') {
 
 /** Fetch all ratings for a given user, newest first. */
 export async function getRatingsForUser(ratedUserId) {
-  const q = query(
-    collection(db, 'ratings'),
-    where('ratedUserId', '==', ratedUserId),
-    orderBy('createdAt', 'desc')
-  )
+  const q = query(collection(db, 'ratings'), where('ratedUserId', '==', ratedUserId))
   const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ ratingId: d.id, ...d.data() }))
+  return snap.docs
+    .map((d) => ({ ratingId: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
 }
