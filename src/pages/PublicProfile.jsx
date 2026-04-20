@@ -111,6 +111,11 @@ export default function PublicProfile() {
   const availMeta = AVAILABILITY_META[profile.availability]
   const lookingForMeta = LOOKING_FOR_META[profile.lookingFor]
 
+  const ratingCount = ratings.length
+  const avgRating = ratingCount > 0
+    ? Math.round((ratings.reduce((s, r) => s + r.rating, 0) / ratingCount) * 10) / 10
+    : 0
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -185,11 +190,11 @@ export default function PublicProfile() {
               </div>
 
               {/* Rating summary */}
-              {profile.totalRatings > 0 && (
+              {ratingCount > 0 && (
                 <div className="flex items-center gap-2 mt-2">
-                  <StarRating rating={profile.averageRating} size={15} />
-                  <span className="text-sm font-semibold text-gray-700">{profile.averageRating.toFixed(1)}</span>
-                  <span className="text-xs text-gray-400">({profile.totalRatings} {profile.totalRatings === 1 ? 'rating' : 'ratings'})</span>
+                  <StarRating rating={avgRating} size={15} />
+                  <span className="text-sm font-semibold text-gray-700">{avgRating.toFixed(1)}</span>
+                  <span className="text-xs text-gray-400">({ratingCount} {ratingCount === 1 ? 'rating' : 'ratings'})</span>
                 </div>
               )}
             </div>
@@ -330,9 +335,9 @@ export default function PublicProfile() {
           <h2 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
             <StarIcon size={16} className="text-yellow-400" />
             Ratings &amp; Reviews
-            {profile.totalRatings > 0 && (
+            {ratingCount > 0 && (
               <span className="ml-1 text-sm font-normal text-gray-500">
-                — {profile.averageRating?.toFixed(1)} avg · {profile.totalRatings} {profile.totalRatings === 1 ? 'rating' : 'ratings'}
+                — {avgRating.toFixed(1)} avg · {ratingCount} {ratingCount === 1 ? 'rating' : 'ratings'}
               </span>
             )}
           </h2>
@@ -344,13 +349,13 @@ export default function PublicProfile() {
               {ratings.map((r) => (
                 <li key={r.ratingId} className="flex gap-3">
                   <img
-                    src={r.raterAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${r.raterName}`}
+                    src={r.raterAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${r.raterName || r.raterId}`}
                     alt={r.raterName}
                     className="h-8 w-8 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-100"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-gray-800">{r.raterName}</span>
+                      <span className="text-sm font-medium text-gray-800">{r.raterName || 'Anonymous'}</span>
                       <StarRating rating={r.rating} size={13} />
                       <span className="text-xs text-gray-400">
                         {r.createdAt?.toDate
